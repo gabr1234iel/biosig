@@ -17,16 +17,25 @@ Simplify the onboarding process using account abstraction, making it easy for us
 ### 🌟 **Unique Value Proposition**
 What makes BioSig unique is its combination of features: a multisignature wallet, biometric account abstraction, gas abstraction, and support for multichain functionality.
 
-## 🛠️ How it's make?
+## 🛠️ How it's made?
 1. Multisignature Wallet - Requires multiple approvals for transactions, enhancing security.
-2. Biometrics Account Abstraction - Integrates biometric authentication, allowing secure access without traditional keys.
-3. Gas Abstraction - Simplifies transactions by covering or reducing gas fees across blockchains.
-4. Multichain Wallet - Manages assets across multiple blockchains from a single interface.
+   - deploy an empty Multisig.sol
+   - deploy MultiSigFactory.sol
+   - setImplementation of MultiSigFactory.sol using address of empty Multisig.sol
+3. Biometrics Account Abstraction - Integrates biometric authentication, allowing secure access without traditional keys.
+4. Gas Abstraction - Simplifies transactions by covering or reducing gas fees across blockchains.
+5. Multichain Wallet - Manages assets across multiple blockchains from a single interface.
+   - Deterministic Deployment (making sure the nonce of the connected address is same on multiple chains)
+   - https://docs.alchemy.com/docs/how-to-deploy-a-contract-to-the-same-address-on-multiple-networks#create-a-hardhat-task-to-query-the-nonce
+   - verify and publish the contract using hardhat npx hardhat verify --network arbitrium {wallet address to be verified}
+   
+
+
 
 ## 💻 The Stack
 1. Frontend - TypeScript, TailwindCSS
 2. UI Library - Tailwindcss, Google Fonts
-3. Web3 Development - Solidity, Thirdweb, Web3.js, Ethers.js
+3. Web3 Development - Solidity, Thirdweb, Web3.js, Ethers.js, Hardhat, Alchemy
 
 ## Contract Address
 ### **Scroll**
@@ -41,6 +50,3 @@ What makes BioSig unique is its combination of features: a multisignature wallet
 
 ### **Aptos**
 1. [Aptos](https://explorer.aptoslabs.com/txn/0x3430dd633cd80844fca6187f6a26c7ebce08219a0ddaf6b495a6327543a6c673?network=devnet)
-# biosig
-≈
-
