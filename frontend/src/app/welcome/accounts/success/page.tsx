@@ -1,23 +1,27 @@
 "use client"
 
-import React, { useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 
 const MultisigSetupSuccessPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const deployedAddress = searchParams.get('address') || '';
+  const [deployedAddress, setDeployedAddress] = useState('');
 
   useEffect(() => {
+    // Get the address from the URL on the client side
+    const searchParams = new URLSearchParams(window.location.search);
+    const address = searchParams.get('address') || '';
+    setDeployedAddress(address);
+
     const redirectTimer = setTimeout(() => {
-      router.push(`/dashboard/${deployedAddress}`);
+      router.push(`/dashboard/${address}`);
     }, 5000); // Redirect after 5 seconds
 
     return () => clearTimeout(redirectTimer);
-  }, [router, deployedAddress]);
+  }, [router]);
 
   return (
     <div className="bg-black text-white min-h-screen flex flex-col">
