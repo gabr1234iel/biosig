@@ -1,7 +1,5 @@
 "use client"
-
 import React, { useEffect, useState } from 'react';
-import InputGroup from '@/app/components/FormElements/InputGroup';
 import Link from 'next/link';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -11,55 +9,47 @@ import { Card, CardContent } from '@/app/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import { ethers } from 'ethers';
-// You'll need to import or define these
 import { MultisigFactoryABI, contractAddress, scrollSepoliaRpcUrl } from '@/lib/interactions/multisigFactoryInteractions';
-import {MultisigABI} from '@/lib/interactions/multisigInteractions';
+import { MultisigABI } from '@/lib/interactions/multisigInteractions';
+import { useRouter } from 'next/navigation';
 
-
-type SignerInputProps = {
-  index: number;
-  totalSigners: number;
-  onRemove: () => void;
-  walletAddress: string;
-  onWalletAddressChange: (index: number, value: string) => void;
-};
-
-const SignerInput: React.FC<SignerInputProps> = ({ index, totalSigners, onRemove, walletAddress, onWalletAddressChange }) => (
-  <div className={`grid grid-cols-2 gap-4 mb-4 ${index === totalSigners - 1 ? 'pb-4' : ''}`}>
-    <InputGroup
-      label={`Signer Name ${index + 1}`}
+const SignerInput: React.FC<{ index: number; walletAddress: string; onWalletAddressChange: (index: number, value: string) => void; onRemove: () => void }> = ({ index, walletAddress, onWalletAddressChange, onRemove }) => (
+  <div className="flex items-center space-x-2 mb-4">
+    <Input
       type="text"
-      placeholder={`Enter signer name ${index + 1}`}
-      customClasses="w-full"
+      placeholder="Enter wallet address"
+      className="flex-grow"
+      value={walletAddress}
+      onChange={(e) => onWalletAddressChange(index, e.target.value)}
     />
-    <div className={`mx-2 flex items-end`}>
-      <Input
-        type="text"
-        placeholder="Enter your wallet address"
-        className="w-full"
-        value={walletAddress}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWalletAddressChange(index, e.target.value)}
-      />
-      {index > 1 && (
-        <Button variant="ghost" className="ml-2 text-red-500" onClick={onRemove}>
-          <X size={35} />
-        </Button>
-      )}
-    </div>
+    {index > 0 && (
+      <Button variant="ghost" className="text-red-500" onClick={onRemove}>
+        <X size={20} />
+      </Button>
+    )}
   </div>
 );
 
 const MultisigSetupPage: React.FC = () => {
+
+  const router = useRouter();
+
   const [isConnected, setIsConnected] = useState(false);
   const account = useActiveAccount();
 
   const [multisigName, setMultisigName] = useState('');
-  const [walletAddresses, setWalletAddresses] = useState(['', '']);
+  const [walletAddresses, setWalletAddresses] = useState(['']);
   const [threshold, setThreshold] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
-    setIsConnected(!!account?.address);
+    if (account?.address) {
+      setIsConnected(true);
+      setWalletAddresses([account.address]);
+    } else {
+      setIsConnected(false);
+      setWalletAddresses(['']);
+    }
   }, [account?.address]);
 
   const addSigner = () => {
@@ -77,51 +67,48 @@ const MultisigSetupPage: React.FC = () => {
     setWalletAddresses(newWalletAddresses);
   };
 
- const handleSubmit = async () => {
-  if (!isConnected) {
-    alert("Please connect your wallet first.");
-    return ;
-  }
+  const handleSubmit = async () => {
+    try {
+      const owners = walletAddresses.filter(address => address.trim() !== '');
+  
+      const encodedData = encodeFunctionData({
+        abi: MultisigABI,
+        functionName: "initialize",
+        args: [owners, BigInt(threshold)],
+      });
+  
+      console.log("Encoded data:", encodedData);
+  
+      const provider = new ethers.JsonRpcProvider(process.env.SCROLL_SEPOLIA_RPC_URL);
+      console.log("Provider:", provider);
+      const wallet = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY!, provider);
+  
+      const factoryContract = new ethers.Contract(contractAddress, MultisigFactoryABI, wallet);
+  
+      const tx = await factoryContract.deployContract(multisigName, encodedData);
+  
+      await tx.wait();
+  
+      console.log("Multisig deployed successfully!");
+      const deployedAddress = await getDeployedMultisigAddress(multisigName);
+      console.log("Deployed Multisig address:", deployedAddress);
+      router.push(`/welcome/accounts/success?address=${deployedAddress}`);
+    } catch (error) {
+      console.error("Error deploying Multisig:", error);
+      alert("Failed to deploy Multisig. See console for details.");
+    }
+  };
 
-  try {
-    const owners = walletAddresses.filter(address => address.trim() !== '');
-
-    const encodedData = encodeFunctionData({
-      abi: MultisigABI,
-      functionName: "initialize",
-      args: [owners, BigInt(threshold)],
-    });
-    console.log("Encoded data:", encodedData);
-
-    const provider = new ethers.JsonRpcProvider(scrollSepoliaRpcUrl);
-    const signer = await provider.getSigner();
-
-    const factoryContract = new ethers.Contract(contractAddress, MultisigFactoryABI, signer);
-
-    const tx = await factoryContract.deployContract(multisigName, encodedData);
-
-    await tx.wait();
-
-    console.log("Multisig deployed successfully!");
-    const deployedAddress = await getDeployedMultisigAddress(multisigName);
-    console.log("Deployed Multisig address:", deployedAddress);
-    // Navigate to dashboard or show success message
-  } catch (error) {
-    console.error("Error deploying Multisig:", error);
-    alert("Failed to deploy Multisig. See console for details.");
-  }
-};
-
-const getDeployedMultisigAddress = async (name: string) => {
-  try {
-    const provider = new ethers.JsonRpcProvider(scrollSepoliaRpcUrl);
-    const factoryContract = new ethers.Contract(contractAddress, MultisigFactoryABI, provider);
-    return await factoryContract.getDeployedAddress(name);
-  } catch (error) {
-    console.error("Error getting deployed Multisig address:", error);
-    throw error;
-  }
-};
+  const getDeployedMultisigAddress = async (name: string) => {
+    try {
+      const provider = new ethers.JsonRpcProvider(scrollSepoliaRpcUrl);
+      const factoryContract = new ethers.Contract(contractAddress, MultisigFactoryABI, provider);
+      return await factoryContract.getDeployedAddress(name);
+    } catch (error) {
+      console.error("Error getting deployed Multisig address:", error);
+      throw error;
+    }
+  };
 
   return (
     <div className="bg-black text-white min-h-screen">
@@ -147,7 +134,8 @@ const getDeployedMultisigAddress = async (name: string) => {
                 placeholder="Enter..."
                 className="bg-gray-800 border-gray-700"
                 value={multisigName}
-                onChange={(e) => setMultisigName(e.target.value)} />
+                onChange={(e) => setMultisigName(e.target.value)}
+              />
             </div>
           </li>
           <li className="flex items-center space-x-4">
@@ -168,10 +156,10 @@ const getDeployedMultisigAddress = async (name: string) => {
                         <SignerInput
                           key={index}
                           index={index}
-                          totalSigners={walletAddresses.length}
-                          onRemove={() => removeSigner(index)}
                           walletAddress={address}
-                          onWalletAddressChange={onWalletAddressChange} />
+                          onWalletAddressChange={onWalletAddressChange}
+                          onRemove={() => removeSigner(index)}
+                        />
                       ))}
                       <div className="mt-6">
                         <Button variant="secondary" onClick={addSigner} className="w-full bg-gray-800 text-white hover:bg-gray-700">
@@ -207,14 +195,8 @@ const getDeployedMultisigAddress = async (name: string) => {
         </ol>
         <button onClick={handleSubmit} className='text-black bg-white p-4 rounded-md hover:text-white hover:bg-black'>Submit</button>
       </main>
-    
-    <footer className="absolute bottom-0 w-full p-4 justify-between text-center text-gray-500">
-        <Button asChild variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
-          <Link href="/welcome">Previous</Link>
-        </Button>
-        <Button variant="secondary" className="bg-gray-800 text-white hover:bg-gray-700">
-          <Link href='/dashboard/0x76128f14e8a7b5f3F179161081f0D04fCAAdee21'>Continue</Link>
-        </Button>
+
+      <footer className="absolute bottom-0 w-full p-4 justify-between text-center text-gray-500">
         <a href="#" className="hover:text-white">Terms of Use</a> | <a href="#" className="hover:text-white">Privacy Policy</a>
       </footer>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect } from 'react';
-import { getAllDeployedContracts } from '@/lib/interactions/multisigFactoryInteractions';
+import { getAllDeployedContracts, getName } from '@/lib/interactions/multisigFactoryInteractions';
 import { interactWithMultisig } from '@/lib/interactions/multisigInteractions';
 import { useActiveAccount } from 'thirdweb/react';
 import Link from 'next/link';
@@ -10,6 +10,7 @@ import { Button } from '@/app/components/ui/button';
 export default function MultisigExistingAccountPage() {
   const [deployedContracts, setDeployedContracts] = useState<string[]>([]);
   const [contractOwners, setContractOwners] = useState<{ [key: string]: string[] }>({});
+  const [contractNames, setContractNames] = useState<{ [key: string]: string }>({});
   const [isLoading, setIsLoading] = useState(true);
   const account = useActiveAccount();
 
@@ -23,6 +24,7 @@ export default function MultisigExistingAccountPage() {
       try {
         const contracts = await getAllDeployedContracts();
         const ownersData: { [key: string]: string[] } = {};
+        const namesData: { [key: string]: string } = {};
         const filteredContracts = [];
 
         for (const contractAddress of contracts) {
@@ -30,11 +32,14 @@ export default function MultisigExistingAccountPage() {
           if (owners.includes(account.address)) {
             ownersData[contractAddress] = owners;
             filteredContracts.push(contractAddress);
+            const name = await getName(contractAddress);
+            namesData[contractAddress] = name;
           }
         }
 
         setDeployedContracts(filteredContracts);
         setContractOwners(ownersData);
+        setContractNames(namesData);
         setIsLoading(false);
       } catch (err) {
         console.error(err);
@@ -64,7 +69,7 @@ return (
                 {deployedContracts.map((contract, index) => (
                   <li key={index} className="border p-4 rounded-lg hover:bg-slate-600">
                   <Link href={`/dashboard/${contract}`} className="block">
-                    <h2 className="text-xl font-semibold mb-2">Wallet: {contract}</h2>
+                    <span className=' items-center flex py-2'><h2 className="text-xl font-semibold mb-2">Wallet: {contract}</h2> <span className='ml-4 px-8 items-center bg-gray-500 rounded-lg text-white'>{contractNames[contract]}</span></span>
                     <h3 className="text-lg font-medium mb-1">Signers:</h3>
                     <ul className="list-disc list-inside">
                       {contractOwners[contract]?.map((owner, ownerIndex) => (
