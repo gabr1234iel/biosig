@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import DashboardButton from "./DashboardButton";
+
 import { getTransaction } from '@/lib/interactions/multisigInteractions';
+import DashboardButton from "./DashboardButton";
 
 interface Transaction {
   to: string;
@@ -19,15 +20,29 @@ const TransactionQueue: React.FC<{ multisigAddress: string }> = ({ multisigAddre
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        // For this example, we'll fetch the first 5 transactions
-        // In a real implementation, you'd need to keep track of the total number of transactions
-        const fetchedTransactions = await Promise.all(
-          Array.from({ length: 5 }, (_, i) => getTransaction(multisigAddress, i))
-        );
-        setTransactions(fetchedTransactions.filter(Boolean)); // Filter out any null results
+        setError(null);
+        const fetchedTransactions = [];
+        
+        // Attempt to fetch up to 5 transactions
+        for (let i = 0; i < 5; i++) {
+          try {
+            const tx = await getTransaction(multisigAddress, i);
+            if (tx) {
+              fetchedTransactions.push(tx);
+            } else {
+              // If we get a null result, assume we've reached the end of the transactions
+              break;
+            }
+          } catch (err) {
+            // If an individual transaction fetch fails, log it but continue
+            console.error(`Error fetching transaction ${i}:`, err);
+          }
+        }
+
+        setTransactions(fetchedTransactions);
       } catch (err) {
-        console.error('Error fetching transactions:', err);
-        setError('Failed to fetch transactions. Please try again.');
+        console.error('Error in transaction fetching process:', err);
+        setError('An unexpected error occurred. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -37,11 +52,7 @@ const TransactionQueue: React.FC<{ multisigAddress: string }> = ({ multisigAddre
   }, [multisigAddress]);
 
   if (loading) {
-    return <div>Loading transactions...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
+    return <div className="text-center py-4">Loading transactions...</div>;
   }
 
   return (
@@ -51,7 +62,9 @@ const TransactionQueue: React.FC<{ multisigAddress: string }> = ({ multisigAddre
       </h4>
 
       <div className="flex flex-col">
-        {transactions.length > 0 ? (
+        {error ? (
+          <div className="text-red-500 mb-4">{error}</div>
+        ) : transactions.length > 0 ? (
           transactions.map((tx, index) => (
             <div key={index} className="flex justify-between border-b py-2">
               <div>
@@ -65,7 +78,7 @@ const TransactionQueue: React.FC<{ multisigAddress: string }> = ({ multisigAddre
             </div>
           ))
         ) : (
-          <p>No pending transactions</p>
+          <p className="text-center py-4">No pending transactions</p>
         )}
         <div className="mt-4 flex justify-end">
           <DashboardButton text="New Transaction" />

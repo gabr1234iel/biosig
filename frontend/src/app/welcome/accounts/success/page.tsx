@@ -27,7 +27,7 @@ const MultisigSetupSuccessPage = () => {
     <div className="bg-black text-white min-h-screen flex flex-col">
       <main className="flex-grow flex items-center justify-center p-8">
         <Card className="bg-gray-900 border-gray-800 max-w-md w-full">
-          <CardContent className="p-6 text-center">
+          <CardContent className="p-4 text-center">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h1 className="text-3xl font-bold mb-4 text-white">Success!</h1>
             <p className="text-xl mb-6 text-white">Your multisig account has been successfully created.</p>
